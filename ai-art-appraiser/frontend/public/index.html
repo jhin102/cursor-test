@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Art Appraiser - AI 미술 평가사</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/canvas.css">
+    <link rel="stylesheet" href="styles/gallery.css">
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-container">
+                    <div class="logo-text">
+                        <h1>🎨 AI 그림 감정사</h1>
+                        <p>AI가 당신의 작품을 평가합니다</p>
+                    </div>
+                </div>
+            </div>
+            <div class="user-info">
+                <div class="username-container">
+                    <span id="username-display" class="username-display">게스트</span>
+                </div>
+                <div class="daily-count">
+                    <span id="daily-count-display">남은 기회: 3/3</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="main-content">
+        <!-- 그리기 영역 -->
+        <section class="drawing-section">
+            <div class="drawing-header">
+                <h3>🎨 당신의 작품을 그려보세요</h3>
+                <p>마우스나 터치로 자유롭게 그림을 그려보세요. AI가 실시간으로 평가해드립니다.</p>
+            </div>
+            <div class="canvas-container">
+                <canvas id="drawing-canvas" width="500" height="500"></canvas>
+                <div class="canvas-overlay" id="canvas-overlay">
+                    <div class="overlay-text">캔버스를 클릭하여 그리기를 시작하세요</div>
+                </div>
+            </div>
+            
+            <!-- 도구바 -->
+            <div class="toolbar">
+                <div class="tool-group">
+                    <div class="brush-selector">
+                        <button class="brush-btn active" data-brush="pen" title="기본 펜">
+                            <span class="brush-icon">✏️</span>
+                            <span class="brush-name">펜</span>
+                        </button>
+                        <button class="brush-btn" data-brush="watercolor" title="수채화 붓">
+                            <span class="brush-icon">🖌️</span>
+                            <span class="brush-name">수채화</span>
+                        </button>
+                        <button class="brush-btn" data-brush="highlighter" title="형광펜">
+                            <span class="brush-icon">🖍️</span>
+                            <span class="brush-name">형광펜</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="tool-group">
+                    <label>브러시 크기:</label>
+                    <input type="range" id="brush-size" min="1" max="30" value="5">
+                    <span id="brush-size-display">5px</span>
+                </div>
+                
+                <div class="tool-group">
+                    <div class="color-picker-container">
+                        <div class="color-palette">
+                            <div class="color-swatch active" data-color="#000000" style="background-color: #000000;"></div>
+                            <div class="color-swatch" data-color="#FF0000" style="background-color: #FF0000;"></div>
+                            <div class="color-swatch" data-color="#00FF00" style="background-color: #00FF00;"></div>
+                            <div class="color-swatch" data-color="#0000FF" style="background-color: #0000FF;"></div>
+                            <div class="color-swatch" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+                        </div>
+                        <div class="color-picker-popup" id="color-picker-popup">
+                            <input type="color" id="color-input" value="#000000">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 액션 버튼 -->
+            <div class="action-buttons">
+                <button type="button" id="evaluate-btn" class="btn btn-primary" disabled>
+                    <span class="btn-text">AI 평가 요청</span>
+                    <span class="btn-loading hidden">평가 중...</span>
+                </button>
+                <button type="button" id="clear-btn" class="btn btn-secondary">캔버스 지우기</button>
+            </div>
+        </section>
+
+        <!-- 플로팅 로봇 -->
+        <div class="floating-robot-container">
+            <img src="assets/robot_painting.png" alt="AI Art Robot" class="robot-image">
+        </div>
+    </main>
+
+        <!-- 결과 모달 -->
+        <div id="result-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎨 AI 평가 결과</h2>
+                    <button type="button" class="modal-close" id="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="evaluation-result">
+                        <div class="result-artwork">
+                            <img id="result-artwork-image" class="result-artwork-image" alt="그림 미리보기">
+                            <div class="result-artwork-info">
+                                <h3 id="result-artwork-title" class="result-artwork-title">제목</h3>
+                            </div>
+                        </div>
+                        <div class="price-display">
+                            <div class="price-main">
+                                <span class="price-label">🎯 예상 가격</span>
+                                <div class="price-amount-container">
+                                    <span class="price-amount" id="estimated-price">0</span>
+                                    <span class="price-unit">원</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="score-breakdown">
+                            <div class="score-item">
+                                <span class="score-label">창의성</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="creativity-fill"></div>
+                                </div>
+                                <span class="score-value" id="creativity-score">0</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">기술적 완성도</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="technical-fill"></div>
+                                </div>
+                                <span class="score-value" id="technical-score">0</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">예술성</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="artistic-fill"></div>
+                                </div>
+                                <span class="score-value" id="artistic-score">0</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">독창성</span>
+                                <div class="score-bar">
+                                    <div class="score-fill" id="originality-fill"></div>
+                                </div>
+                                <span class="score-value" id="originality-score">0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-comment">
+                            <h3>AI 코멘트</h3>
+                            <p id="ai-comment-text">평가 코멘트가 여기에 표시됩니다.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="save-artwork-btn" class="btn btn-primary">갤러리에 저장</button>
+                    <button type="button" id="new-drawing-btn" class="btn btn-secondary">새로 그리기</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 탭 제거: 갤러리만 표시 -->
+    <div class="tab-content">
+        <div id="gallery-content" class="tab-panel active">
+            <div class="gallery-header">
+                <h2>🎨 작품 갤러리</h2>
+                <div class="gallery-stats">
+                    <span id="gallery-count">총 0개 작품</span>
+                </div>
+            </div>
+            <div class="gallery-grid" id="gallery-grid">
+                <!-- 갤러리 작품들이 여기에 동적으로 추가됩니다 -->
+            </div>
+            <div class="gallery-empty" id="gallery-empty">
+                <p>아직 평가된 작품이 없습니다.</p>
+                <p>위에서 그림을 그려보세요!</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- 로딩 오버레이 -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>AI가 작품을 감상 중...</p>
+        </div>
+    </div>
+
+    <!-- 에러 모달 -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content error-modal">
+            <div class="modal-header">
+                <h3>⚠️ 오류</h3>
+                <button type="button" id="error-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="error-message">오류가 발생했습니다.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="error-ok-btn" class="btn btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 사용자명 입력 모달 -->
+    <div id="username-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>사용자명을 입력해주세요</h3>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="username-input" class="username-input" placeholder="게스트" maxlength="20" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="username-ok-btn" class="btn btn-primary">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 스크립트 -->
+    <script src="scripts/app.js"></script>
+    <script src="scripts/canvas.js"></script>
+    <script src="scripts/gallery.js"></script>
+    
+    <script src="scripts/api.js"></script>
+</body>
+</html> 

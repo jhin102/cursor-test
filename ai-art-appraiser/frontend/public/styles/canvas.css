@@ -1,0 +1,207 @@
+/* 캔버스 컨테이너 */
+.canvas-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+#drawing-canvas {
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: crosshair;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: border-color 0.2s;
+}
+
+#drawing-canvas:hover {
+    border-color: #667eea;
+}
+
+#drawing-canvas:active {
+    border-color: #764ba2;
+}
+
+/* 캔버스 오버레이 */
+.canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 500px;
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    pointer-events: none;
+    transition: opacity 0.3s;
+}
+
+.canvas-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.overlay-text {
+    font-size: 1.2rem;
+    color: #718096;
+    text-align: center;
+    padding: 2rem;
+}
+
+/* 평가 결과 모달 스타일 */
+.evaluation-result {
+    text-align: center;
+}
+
+.score-display {
+    margin-bottom: 2rem;
+}
+
+.total-score {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.score-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.score-label {
+    font-size: 1.5rem;
+    color: #718096;
+}
+
+.price-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    color: #4a5568;
+}
+
+.price-amount {
+    font-weight: bold;
+    color: #38a169;
+}
+
+/* 점수 세부 내역 */
+.score-breakdown {
+    margin: 2rem 0;
+}
+
+.score-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: #f7fafc;
+    border-radius: 6px;
+}
+
+.score-label {
+    min-width: 120px;
+    font-size: 0.9rem;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.score-bar {
+    flex: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    transition: width 1s ease-out;
+    width: 0%;
+}
+
+.score-value {
+    min-width: 30px;
+    font-weight: bold;
+    color: #4a5568;
+    text-align: right;
+}
+
+/* AI 코멘트 */
+.ai-comment {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #f7fafc;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.ai-comment h3 {
+    color: #4a5568;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.ai-comment p {
+    color: #4a5568;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+/* 버튼 로딩 상태 */
+.btn-loading {
+    display: none;
+}
+
+.btn.loading .btn-text {
+    display: none;
+}
+
+.btn.loading .btn-loading {
+    display: inline;
+}
+
+/* 반응형 캔버스 */
+@media (max-width: 768px) {
+    .canvas-container {
+        margin: 0.5rem 0;
+    }
+    
+    #drawing-canvas {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+    
+    .canvas-overlay {
+        width: 100%;
+        max-width: 400px;
+        height: auto;
+    }
+    
+    .score-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .score-label {
+        min-width: auto;
+    }
+    
+    .score-value {
+        text-align: left;
+    }
+} 
