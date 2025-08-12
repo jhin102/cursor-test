@@ -226,7 +226,7 @@ class ArtApp {
         const imageElement = document.getElementById('result-artwork-image');
         if (imageElement) {
             const imageUrl = (result.artwork && result.artwork.image_url) ? (
-                result.artwork.image_url.startsWith('http') ? result.artwork.image_url : `http://localhost:3000${result.artwork.image_url}`
+                result.artwork.image_url.startsWith('http') ? result.artwork.image_url : `${result.artwork.image_url}`
             ) : '';
             if (imageUrl) {
                 imageElement.src = imageUrl;
