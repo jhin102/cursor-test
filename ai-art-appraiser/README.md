@@ -17,30 +17,30 @@ git clone <repository-url>
 cd ai-art-appraiser
 ```
 
-### 2. 백엔드 설정
+### 2. 의존성 설치 (루트)
 ```bash
-cd backend
 npm install
 ```
 
-### 3. 환경 변수 설정
+### 3. 환경 변수 설정(.env)
 ```bash
-cp env.example .env
-# .env 파일을 열어서 CLAUDE_API_KEY를 설정하세요
+# Neon Postgres 연결 문자열
+DATABASE_URL=postgres://user:pass@ep-xxxx-xxxxx.neon.tech/dbname?sslmode=require
+
+# Anthropic Claude API Key
+CLAUDE_API_KEY=sk-ant-...
+
+# (로컬에서 Blob 쓰기 테스트 시)
+BLOB_READ_WRITE_TOKEN=...
 ```
 
-### 4. 데이터베이스 초기화
-```bash
-npm run init-db
-```
-
-### 5. 서버 실행
+### 4. 로컬 서버 실행
 ```bash
 npm run dev
 ```
 
-### 6. 프론트엔드 접속
-브라우저에서 `http://localhost:3000`으로 접속하세요.
+### 5. 정적 파일
+`public/` 디렉터리에서 제공됩니다. Vercel 배포 시 자동 서빙됩니다.
 
 ## 🛠️ 기술 스택
 
@@ -50,28 +50,28 @@ npm run dev
 - CSS3 (반응형 디자인)
 
 ### Backend
-- Node.js + Express
-- SQLite (데이터베이스)
+- Node.js + Express(Serverless on Vercel)
+- Neon Postgres (데이터베이스)
+- Vercel Blob (이미지 저장)
 - Anthropic Claude API (AI 평가)
 
 ## 📁 프로젝트 구조
 
 ```
 ai-art-appraiser/
-├── frontend/          # 프론트엔드 (Vanilla JS)
-│   └── public/
-│       ├── index.html
-│       ├── styles/
-│       └── scripts/
-├── backend/           # 백엔드 (Node.js + Express)
-│   ├── src/
-│   │   ├── controllers/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   └── utils/
-│   └── database/
-└── docs/             # 문서
+├── api/                 # Serverless 함수 엔트리
+│   └── index.js
+├── backend/
+│   └── src/
+│       ├── app.js       # Express 앱(리스너 없음)
+│       ├── local-server.js
+│       ├── routes/
+│       ├── services/
+│       └── utils/
+├── public/              # 정적 파일 (index.html, scripts, styles, assets)
+├── vercel.json
+├── package.json
+└── docs/
 ```
 
 ## 🎮 게임 플로우
