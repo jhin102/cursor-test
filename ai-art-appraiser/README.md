@@ -34,12 +34,7 @@ CLAUDE_API_KEY=sk-ant-...
 BLOB_READ_WRITE_TOKEN=...
 ```
 
-### 4. 로컬 서버 실행
-```bash
-npm run dev
-```
-
-### 5. 정적 파일
+### 4. 정적 파일
 `public/` 디렉터리에서 제공됩니다. Vercel 배포 시 자동 서빙됩니다.
 
 ## 🛠️ 기술 스택
@@ -50,7 +45,7 @@ npm run dev
 - CSS3 (반응형 디자인)
 
 ### Backend
-- Node.js + Express(Serverless on Vercel)
+- Vercel Serverless Functions (파일 기반 라우팅)
 - Neon Postgres (데이터베이스)
 - Vercel Blob (이미지 저장)
 - Anthropic Claude API (AI 평가)
@@ -59,15 +54,20 @@ npm run dev
 
 ```
 ai-art-appraiser/
-├── api/                 # Serverless 함수 엔트리
-│   └── index.js
-├── backend/
-│   └── src/
-│       ├── app.js       # Express 앱(리스너 없음)
-│       ├── local-server.js
-│       ├── routes/
-│       ├── services/
-│       └── utils/
+├── api/                 # Serverless 함수들(파일 기반 라우팅)
+│   ├── index.js         # /api
+│   ├── artworks/
+│   │   ├── evaluate.js  # POST /api/artworks/evaluate
+│   │   ├── gallery.js   # GET /api/artworks/gallery
+│   │   └── user/[username].js # GET /api/artworks/user/:username
+│   ├── users/
+│   │   ├── index.js     # POST /api/users
+│   │   └── [username].js# GET /api/users/:username
+│   ├── rankings/
+│   │   ├── index.js     # GET /api/rankings
+│   │   ├── weekly.js    # GET /api/rankings/weekly
+│   │   └── stats.js     # GET /api/rankings/stats
+│   └── _lib/            # 공용 라이브러리(DB, Claude 등)
 ├── public/              # 정적 파일 (index.html, scripts, styles, assets)
 ├── vercel.json
 ├── package.json
