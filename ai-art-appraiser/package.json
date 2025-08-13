@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "description": "AI Art Appraiser on Vercel (Neon Postgres + Blob)",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "nodemon src/local-server.js",
     "test": "jest",
