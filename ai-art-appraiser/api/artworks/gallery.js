@@ -1,4 +1,5 @@
 const database = require('../_lib/database');
+const { logError } = require('../_lib/log');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
@@ -27,6 +28,7 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ success: true, artworks, total: artworks.length }));
   } catch (error) {
+    logError(req, error, 'artworks/gallery', { query: req.url });
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: '갤러리 조회 중 오류가 발생했습니다.' }));

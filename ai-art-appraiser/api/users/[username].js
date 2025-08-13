@@ -1,4 +1,5 @@
 const database = require('../_lib/database');
+const { logError } = require('../_lib/log');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') {
@@ -50,6 +51,7 @@ module.exports = async (req, res) => {
       }
     }));
   } catch (error) {
+    logError(req, error, 'users/[username]', { path: req.url });
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: '사용자 정보 조회 중 오류가 발생했습니다.' }));

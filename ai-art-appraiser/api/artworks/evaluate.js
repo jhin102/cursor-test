@@ -2,6 +2,7 @@ const database = require('../_lib/database');
 const claudeService = require('../_lib/claudeService');
 const { v4: uuidv4 } = require('uuid');
 const { put } = require('@vercel/blob');
+const { logError } = require('../_lib/log');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -88,6 +89,9 @@ module.exports = async (req, res) => {
       }
     }));
   } catch (error) {
+    logError(req, error, 'artworks/evaluate', {
+      step: 'evaluate-handler',
+    });
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: '작품 평가 중 오류가 발생했습니다.', message: error.message }));

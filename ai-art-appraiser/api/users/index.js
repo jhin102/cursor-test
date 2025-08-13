@@ -1,4 +1,5 @@
 const database = require('../_lib/database');
+const { logError } = require('../_lib/log');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -45,6 +46,7 @@ module.exports = async (req, res) => {
       }
     }));
   } catch (error) {
+    logError(req, error, 'users/index', { step: 'create-user' });
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ error: '사용자 생성 중 오류가 발생했습니다.' }));
