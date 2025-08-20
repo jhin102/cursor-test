@@ -390,6 +390,9 @@ class DrawingCanvas {
         this.currentStroke = new Stroke(this.brushType, this.brushSize, this.brushColor);
         this.currentStroke.addInputPoint(point.x, point.y, point.time);
         
+        // 오버레이 숨기기
+        this.hideOverlay();
+        
         this.hasContent = true;
         this.notifyDrawingStateChange();
     }

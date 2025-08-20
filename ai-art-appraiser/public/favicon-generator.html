@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Favicon Generator</title>
+</head>
+<body>
+    <h1>파비콘 PNG 생성기</h1>
+    <p>아래 버튼을 클릭하여 SVG를 PNG로 변환하세요:</p>
+    
+    <canvas id="canvas" width="32" height="32" style="border: 1px solid #ccc;"></canvas>
+    <br><br>
+    <button onclick="generatePNG()">PNG 다운로드</button>
+    
+    <script>
+        function generatePNG() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // SVG 내용을 이미지로 로드
+            const svgContent = `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- 배경 원 -->
+                <circle cx="16" cy="16" r="15" fill="#667eea" stroke="#4a5568" stroke-width="1"/>
+                
+                <!-- 팔레트 -->
+                <ellipse cx="16" cy="18" rx="8" ry="4" fill="#f7fafc" stroke="#4a5568" stroke-width="0.5"/>
+                
+                <!-- 팔레트 구멍 -->
+                <circle cx="16" cy="18" r="1.5" fill="#4a5568"/>
+                
+                <!-- 색상 점들 -->
+                <circle cx="12" cy="16" r="1.2" fill="#FF6B6B"/>
+                <circle cx="20" cy="16" r="1.2" fill="#4ECDC4"/>
+                <circle cx="14" cy="20" r="1.2" fill="#45B7D1"/>
+                <circle cx="18" cy="20" r="1.2" fill="#96CEB4"/>
+                
+                <!-- 브러시 -->
+                <rect x="22" y="8" width="2" height="8" rx="1" fill="#8B4513"/>
+                <rect x="21" y="6" width="4" height="3" rx="1" fill="#D2691E"/>
+                
+                <!-- AI 로봇 눈 -->
+                <circle cx="8" cy="12" r="1" fill="#4a5568"/>
+                <circle cx="10" cy="12" r="1" fill="#4a5568"/>
+                
+                <!-- AI 로봇 입 -->
+                <rect x="7" y="15" width="4" height="1" rx="0.5" fill="#4a5568"/>
+            </svg>`;
+            
+            const svgBlob = new Blob([svgContent], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                
+                // PNG 다운로드
+                canvas.toBlob(function(blob) {
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'favicon.png';
+                    a.click();
+                    URL.revokeObjectURL(downloadUrl);
+                });
+                
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+        
+        // 페이지 로드 시 자동으로 PNG 생성
+        window.onload = function() {
+            generatePNG();
+        };
+    </script>
+</body>
+</html>
