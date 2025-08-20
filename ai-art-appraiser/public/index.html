@@ -25,7 +25,7 @@
                     <span id="username-display" class="username-display">게스트</span>
                 </div>
                 <div class="daily-count">
-                    <span id="daily-count-display">남은 기회: 3/3</span>
+                    <span id="daily-count-display">남은 기회: 10/10</span>
                 </div>
             </div>
         </div>
@@ -116,22 +116,24 @@
                 </div>
                 <div class="modal-body">
                     <div class="evaluation-result">
+                        <!-- 가운데 정렬된 그림 -->
                         <div class="result-artwork">
                             <img id="result-artwork-image" class="result-artwork-image" alt="그림 미리보기">
-                            <div class="result-artwork-info">
-                                <h3 id="result-artwork-title" class="result-artwork-title">제목</h3>
-                            </div>
-                        </div>
-                        <div class="price-display">
-                            <div class="price-main">
-                                <span class="price-label">🎯 예상 가격</span>
-                                <div class="price-amount-container">
-                                    <span class="price-amount" id="estimated-price">0</span>
-                                    <span class="price-unit">원</span>
-                                </div>
-                            </div>
                         </div>
                         
+                        <!-- 가운데 정렬된 그림 제목 -->
+                        <div class="result-artwork-title-container">
+                            <h3 id="result-artwork-title" class="result-artwork-title">제목</h3>
+                        </div>
+                        
+                        <!-- 감정 가격 (강조 줄임) -->
+                        <div class="price-display">
+                            <span class="price-label">감정 가격:</span>
+                            <span class="price-amount" id="estimated-price">0</span>
+                            <span class="price-unit">원</span>
+                        </div>
+                        
+                        <!-- 점수 항목들 -->
                         <div class="score-breakdown">
                             <div class="score-item">
                                 <span class="score-label">창의성</span>
@@ -163,6 +165,7 @@
                             </div>
                         </div>
                         
+                        <!-- AI 코멘트 섹션 -->
                         <div class="ai-comment">
                             <h3>AI 코멘트</h3>
                             <p id="ai-comment-text">평가 코멘트가 여기에 표시됩니다.</p>
@@ -170,8 +173,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="save-artwork-btn" class="btn btn-primary">갤러리에 저장</button>
-                    <button type="button" id="new-drawing-btn" class="btn btn-secondary">새로 그리기</button>
+                    <button type="button" id="close-result-btn" class="btn btn-primary">닫기</button>
                 </div>
             </div>
         </div>

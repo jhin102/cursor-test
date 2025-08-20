@@ -6,7 +6,7 @@ class ArtApp {
         this.ranking = null;
         this.api = null;
         this.currentUser = '게스트';
-        this.userDailyCount = 3;
+        this.userDailyCount = 10;
         
         this.init();
     }
@@ -23,9 +23,11 @@ class ArtApp {
         // 이벤트 리스너 설정
         this.setupEventListeners();
         
-        // 사용자명 입력 모달 띄우고 초기 데이터 로드
+        // 바로 초기 데이터 로드
+        this.loadInitialData();        
+
         this.showUsernameModal();
-        
+
         console.log('✅ AI Art Appraiser 초기화 완료');
     }
     
@@ -117,18 +119,11 @@ class ArtApp {
         }
         
         // 모달 액션 버튼들
-        const saveArtworkBtn = document.getElementById('save-artwork-btn');
-        saveArtworkBtn.addEventListener('click', (e) => {
+        const closeResultBtn = document.getElementById('close-result-btn');
+        closeResultBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.saveArtwork();
-        });
-        
-        const newDrawingBtn = document.getElementById('new-drawing-btn');
-        newDrawingBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.startNewDrawing();
+            this.closeResultModal();
         });
         
         // 탭 네비게이션
@@ -162,7 +157,7 @@ class ArtApp {
     updateUserDisplay() {
         const dailyCountDisplay = document.getElementById('daily-count-display');
         const usernameDisplay = document.getElementById('username-display');
-        if (dailyCountDisplay) dailyCountDisplay.textContent = `남은 기회: ${this.userDailyCount}/3`;
+        if (dailyCountDisplay) dailyCountDisplay.textContent = `남은 기회: ${this.userDailyCount}/10`;
         if (usernameDisplay) usernameDisplay.textContent = this.currentUser;
     }
     
@@ -417,14 +412,7 @@ class ArtApp {
         }
     }
     
-    saveArtwork() {
-        // 갤러리에 저장 (이미 API에서 자동으로 저장됨)
-        this.hideResultModal();
-        this.startNewDrawing();
-    }
-    
-    startNewDrawing() {
-        this.canvas.clear();
+    closeResultModal() {
         this.hideResultModal();
     }
     
