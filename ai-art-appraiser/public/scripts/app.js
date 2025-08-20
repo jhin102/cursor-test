@@ -5,63 +5,122 @@ class ArtApp {
         this.gallery = null;
         this.ranking = null;
         this.api = null;
-        this.currentUser = '게스트';
-        this.userDailyCount = 10;
+        this.googleClientId = '9576569609-vc9ppdgrs11blupa6a6qdvirfepseavh.apps.googleusercontent.com'; // Google Cloud Console에서 받은 클라이언트 ID (현재 비활성화)
+        
+        // 저장된 로그인 정보 복원
+        this.restoreLoginState();
         
         this.init();
     }
     
+    restoreLoginState() {
+        try {
+            const savedUser = localStorage.getItem('artApp_user');
+            const savedToken = localStorage.getItem('artApp_token');
+            const savedDailyCount = localStorage.getItem('artApp_dailyCount');
+            
+            if (savedUser && savedToken) {
+                this.currentUser = savedUser;
+                this.userToken = savedToken;
+                this.userDailyCount = parseInt(savedDailyCount) || 0;
+                console.log('로그인 상태 복원됨:', this.currentUser);
+            } else {
+                this.currentUser = null;
+                this.userToken = null;
+                this.userDailyCount = 0;
+            }
+        } catch (error) {
+            console.error('로그인 상태 복원 실패:', error);
+            this.currentUser = null;
+            this.userToken = null;
+            this.userDailyCount = 0;
+        }
+    }
+    
+    saveLoginState(user, token, dailyCount) {
+        try {
+            localStorage.setItem('artApp_user', user);
+            localStorage.setItem('artApp_token', token);
+            localStorage.setItem('artApp_dailyCount', dailyCount.toString());
+        } catch (error) {
+            console.error('로그인 상태 저장 실패:', error);
+        }
+    }
+    
+    clearLoginState() {
+        try {
+            localStorage.removeItem('artApp_user');
+            localStorage.removeItem('artApp_token');
+            localStorage.removeItem('artApp_dailyCount');
+            console.log('로그인 상태가 초기화되었습니다.');
+        } catch (error) {
+            console.error('로그인 상태 삭제 실패:', error);
+        }
+    }
+    
+    // 개발자용: localStorage 완전 초기화
+    forceClearAllData() {
+        try {
+            localStorage.clear();
+            console.log('모든 localStorage 데이터가 초기화되었습니다.');
+            location.reload();
+        } catch (error) {
+            console.error('localStorage 초기화 실패:', error);
+        }
+    }
+    
     init() {
-        console.log('🎨 AI Art Appraiser 초기화 중...');
-        
-        // 컴포넌트 초기화
-        this.canvas = new DrawingCanvas('drawing-canvas');
-        this.gallery = new Gallery();
-        // 랭킹 기능 제거
-        this.api = new ArtAPI();
-        
-        // 이벤트 리스너 설정
-        this.setupEventListeners();
-        
-        // 바로 초기 데이터 로드
-        this.loadInitialData();        
+        try {
+            // 컴포넌트 초기화
+            this.canvas = new DrawingCanvas('drawing-canvas');
+            this.gallery = new Gallery();
+            // 랭킹 기능 제거
+            this.api = new ArtAPI();
+            
+            // 이벤트 리스너 설정
+            this.setupEventListeners();
+            
+            // 사용자 정보 표시 업데이트
+            this.updateUserDisplay();
+            
+            // 페이지 첫 진입 시 갤러리 로드 (로그인 상태와 무관)
+            this.loadInitialData();
 
-        this.showUsernameModal();
-
-        console.log('✅ AI Art Appraiser 초기화 완료');
+            // 로그인 상태에 따라 Google Sign-In 초기화
+            if (this.currentUser) {
+                // 이미 로그인된 상태
+                console.log('이미 로그인된 상태로 시작');
+            } else {
+                // 로그인되지 않은 상태 - Google Sign-In 초기화
+                this.waitForGoogleAndInit();
+            }
+        } catch (error) {
+            console.error('앱 초기화 실패:', error);
+            this.showError('앱 초기화에 실패했습니다. 페이지를 새로고침해주세요.');
+        }
     }
     
     setupEventListeners() {
-        // 사용자명 입력 모달 이벤트
-        const usernameModal = document.getElementById('username-modal');
-        const usernameInput = document.getElementById('username-input');
-        const usernameOkBtn = document.getElementById('username-ok-btn');
-        if (usernameOkBtn) {
-            usernameOkBtn.addEventListener('click', (e) => {
+        // Google 로그인 모달 이벤트 (게스트 로그인 제거됨)
+        
+        // 로그아웃 버튼
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const name = (usernameInput.value || '').trim() || '게스트';
-                this.currentUser = name;
-                this.updateUserDisplay();
-                if (usernameModal) usernameModal.classList.add('hidden');
-                this.loadInitialData();
+                this.logout();
             });
         }
-        if (usernameInput) {
-            usernameInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    usernameOkBtn.click();
-                }
-            });
-        }
+        
+
         
         // 평가 버튼
         const evaluateBtn = document.getElementById('evaluate-btn');
         evaluateBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🔘 평가 버튼 클릭됨');
+
             this.evaluateArtwork();
         });
         
@@ -144,6 +203,9 @@ class ArtApp {
     
     async loadInitialData() {
         try {
+            // 페이지 첫 진입 시 갤러리 로딩 (로그인 상태와 무관)
+            this.showGalleryLoading();
+            
             // 갤러리 데이터 로드
             await this.gallery.loadGallery();
             
@@ -151,56 +213,107 @@ class ArtApp {
             
         } catch (error) {
             console.error('초기 데이터 로드 실패:', error);
+        } finally {
+            // 갤러리 로딩 숨김
+            this.hideGalleryLoading();
         }
     }
     
     updateUserDisplay() {
         const dailyCountDisplay = document.getElementById('daily-count-display');
         const usernameDisplay = document.getElementById('username-display');
-        if (dailyCountDisplay) dailyCountDisplay.textContent = `남은 기회: ${this.userDailyCount}/10`;
-        if (usernameDisplay) usernameDisplay.textContent = this.currentUser;
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        if (dailyCountDisplay) {
+            if (this.currentUser) {
+                dailyCountDisplay.textContent = `남은 기회: ${this.userDailyCount}/10`;
+            } else {
+                dailyCountDisplay.textContent = '로그인이 필요합니다';
+            }
+        }
+        
+        if (usernameDisplay) {
+            usernameDisplay.textContent = this.currentUser || '로그인 필요';
+        }
+        
+        // 로그아웃 버튼 표시/숨김 처리
+        if (logoutBtn) {
+            if (this.currentUser) {
+                logoutBtn.classList.remove('hidden');
+            } else {
+                logoutBtn.classList.add('hidden');
+            }
+        }
     }
     
     updateEvaluateButton(hasContent) {
         const evaluateBtn = document.getElementById('evaluate-btn');
-        evaluateBtn.disabled = !hasContent || this.userDailyCount <= 0;
+        evaluateBtn.disabled = !hasContent || !this.currentUser || this.userDailyCount <= 0;
     }
     
     async evaluateArtwork() {
         try {
-            console.log('🎨 작품 평가 시작');
+            // 로그인 상태 확인
+            if (!this.currentUser) {
+                this.showError('로그인이 필요합니다.');
+                this.showLoginModal();
+                return;
+            }
             
             // 로딩 상태 시작
             this.showLoading();
             
+            // 캔버스가 초기화되었는지 확인
+            if (!this.canvas) {
+                this.showError('캔버스가 초기화되지 않았습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+            
             // 캔버스 이미지 데이터 가져오기
             const imageData = this.canvas.getImageData();
-            console.log('📊 이미지 데이터 길이:', imageData.length);
+
             
             // API 호출
-            console.log('📡 API 호출 중...');
             const result = await this.api.evaluateArtwork(imageData, this.currentUser);
-            console.log('✅ API 응답 받음:', result);
             
             // 결과 표시
-            console.log('📋 결과 표시 시작');
+
             this.showEvaluationResult(result);
             
             // 사용자 정보 업데이트
             this.userDailyCount = result.user.daily_count;
+            this.saveLoginState(this.currentUser, this.userToken, this.userDailyCount);
             this.updateUserDisplay();
             
             // 갤러리 새로고침 (비동기로 처리하여 모달 표시에 영향 주지 않도록)
             setTimeout(async () => {
                 try {
+                    this.showGalleryLoading();
                     await this.gallery.loadGallery();
                 } catch (error) {
                     console.error('갤러리 새로고침 실패:', error);
+                } finally {
+                    this.hideGalleryLoading();
                 }
             }, 1000);
             
         } catch (error) {
             console.error('❌ 작품 평가 실패:', error);
+            
+            // JWT 토큰 관련 에러인 경우 로그아웃 처리
+            if (error.message.includes('토큰이 만료되었거나 유효하지 않습니다') || 
+                error.message.includes('invalid algorithm')) {
+                console.log('JWT 토큰 에러 감지, 로그아웃 처리');
+                this.clearLoginState();
+                this.currentUser = null;
+                this.userToken = null;
+                this.userDailyCount = 0;
+                this.updateUserDisplay();
+                this.showError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                this.showLoginModal();
+                return;
+            }
+            
             this.showError(this.api.handleError(error));
         } finally {
             this.hideLoading();
@@ -208,7 +321,7 @@ class ArtApp {
     }
     
     showEvaluationResult(result) {
-        console.log('🎨 평가 결과 표시 시작:', result);
+
         
         // 제목 표시
         const titleElement = document.getElementById('result-artwork-title');
@@ -233,26 +346,20 @@ class ArtApp {
         // 가격 표시
         const estimatedPriceElement = document.getElementById('estimated-price');
         
-        console.log('💰 가격 요소:', estimatedPriceElement);
-        console.log('💰 가격 데이터:', result.evaluation.estimated_price);
+
         
         if (estimatedPriceElement) {
             estimatedPriceElement.textContent = result.evaluation.estimated_price;
-            console.log('✅ 가격 설정 완료:', result.evaluation.estimated_price);
-        } else {
-            console.error('❌ 가격 요소를 찾을 수 없습니다');
         }
         
         // AI 코멘트 표시
         const commentElement = document.getElementById('ai-comment-text');
-        console.log('💬 코멘트 요소:', commentElement);
         if (commentElement) {
             commentElement.textContent = result.artwork.comment;
-            console.log('✅ 코멘트 설정 완료');
         }
         
         // 모달 표시
-        console.log('📋 모달 표시 시도');
+
         
         // 모달 표시를 약간 지연시켜 DOM 업데이트가 완료된 후 실행
         setTimeout(() => {
@@ -261,7 +368,7 @@ class ArtApp {
         
         // 세부 점수 표시 (모달이 표시된 후)
         setTimeout(() => {
-            console.log('⏰ 점수 바 업데이트 시작');
+
             this.updateScoreBar('creativity', result.evaluation.creativity, 10);
             this.updateScoreBar('technical', result.evaluation.technical_skill, 10);
             this.updateScoreBar('artistic', result.evaluation.artistic_value, 10);
@@ -300,20 +407,15 @@ class ArtApp {
         
         if (fillElement && scoreElement) {
             const percentage = (score / maxScore) * 100;
-            console.log(`📊 ${type} 점수 업데이트: ${score}/${maxScore} (${percentage}%)`);
             fillElement.style.width = `${percentage}%`;
             scoreElement.textContent = score;
-        } else {
-            console.error(`❌ ${type} 점수 바 요소를 찾을 수 없습니다`);
         }
     }
     
     animateScoreBars() {
-        console.log('🎬 점수 바 애니메이션 시작');
         const scoreBars = document.querySelectorAll('.score-fill');
         scoreBars.forEach((bar, index) => {
             const targetWidth = bar.style.width;
-            console.log(`📊 점수 바 ${index + 1}: ${targetWidth}`);
             bar.style.width = '0%';
             setTimeout(() => {
                 bar.style.width = targetWidth;
@@ -322,37 +424,14 @@ class ArtApp {
     }
     
     showResultModal() {
-        console.log('🔍 결과 모달 요소 검색 중...');
         const modal = document.getElementById('result-modal');
-        console.log('📋 모달 요소:', modal);
         
         if (modal) {
-            console.log('📋 결과 모달 표시 시도');
-            console.log('📋 현재 모달 클래스:', modal.className);
-            
             // 모달을 강제로 표시
             modal.style.display = 'flex';
             modal.style.visibility = 'visible';
             modal.style.opacity = '1';
             modal.classList.remove('hidden');
-            
-            console.log('📋 hidden 클래스 제거 후:', modal.className);
-            console.log('✅ 모달 표시 완료');
-            
-            // 추가 디버깅: 모달이 실제로 보이는지 확인
-            setTimeout(() => {
-                const computedStyle = window.getComputedStyle(modal);
-                console.log('📋 모달 display 속성:', computedStyle.display);
-                console.log('📋 모달 visibility 속성:', computedStyle.visibility);
-                console.log('📋 모달 opacity 속성:', computedStyle.opacity);
-            }, 100);
-        } else {
-            console.error('❌ 결과 모달을 찾을 수 없습니다');
-            console.error('❌ DOM에 result-modal ID를 가진 요소가 없습니다');
-            
-            // 모든 모달 요소 확인
-            const allModals = document.querySelectorAll('.modal');
-            console.log('🔍 페이지의 모든 모달 요소:', allModals);
         }
     }
     
@@ -379,14 +458,208 @@ class ArtApp {
         evaluateBtn.classList.add('loading');
     }
 
-    showUsernameModal() {
-        const usernameModal = document.getElementById('username-modal');
-        const usernameInput = document.getElementById('username-input');
-        if (usernameModal) {
-            usernameModal.classList.remove('hidden');
-            setTimeout(() => {
-                if (usernameInput) usernameInput.focus();
-            }, 50);
+    waitForGoogleAndInit() {
+        // 로그인 대기 표시
+        this.showLoginWaiting();
+        
+        // Google 클라이언트 ID가 없으면 바로 게스트 모드로 진행
+        if (!this.googleClientId) {
+            this.hideLoginWaiting();
+            this.showLoginModalWithoutGoogle();
+            return;
+        }
+        
+        // Google 라이브러리가 로드될 때까지 대기 (최대 5초)
+        let attempts = 0;
+        const maxAttempts = 50; // 5초 (100ms * 50)
+        
+        const checkGoogle = () => {
+            attempts++;
+            
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                this.hideLoginWaiting();
+                this.initializeGoogleSignIn();
+                this.showLoginModal();
+            } else if (attempts >= maxAttempts) {
+                console.warn('⚠️ Google Sign-In 라이브러리 로드 실패, 게스트 모드로 진행');
+                this.hideLoginWaiting();
+                this.showLoginModalWithoutGoogle();
+            } else {
+                setTimeout(checkGoogle, 100);
+            }
+        };
+        
+        checkGoogle();
+    }
+    
+    initializeGoogleSignIn() {
+        // Google Sign-In 초기화
+        google.accounts.id.initialize({
+            client_id: this.googleClientId,
+            callback: this.handleGoogleSignIn.bind(this)
+        });
+        
+        // Google Sign-In 버튼 렌더링
+        this.renderGoogleSignInButton();
+    }
+
+    renderGoogleSignInButton() {
+        const container = document.getElementById('google-signin-container');
+        
+        if (container && typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            // 기존 버튼 제거
+            container.innerHTML = '';
+            
+            // 새 버튼 렌더링
+            google.accounts.id.renderButton(
+                container,
+                { 
+                    theme: 'outline', 
+                    size: 'large',
+                    text: 'signin_with',
+                    shape: 'rectangular'
+                }
+            );
+        }
+    }
+    
+
+    
+    handleGoogleSignIn(response) {
+
+        
+        // ID 토큰을 서버로 전송하여 검증
+        this.verifyGoogleToken(response.credential);
+    }
+    
+    async verifyGoogleToken(idToken) {
+        try {
+            // JWT 토큰을 디코딩하여 사용자 정보 추출 (임시 테스트용)
+            const payload = this.decodeJWT(idToken);
+
+            
+                        // Google ID 토큰을 직접 사용하지 않고 서버 검증을 통해 JWT 토큰을 받아야 함
+            // 이 부분은 제거하고 서버 검증만 사용
+            
+            // 서버 검증 시도
+            const result = await this.api.verifyGoogleToken(idToken);
+
+            
+            // 사용자 정보 설정
+            this.currentUser = result.user.name || result.user.email;
+            this.userToken = result.token;
+            this.userDailyCount = result.user.daily_count || 10;
+            
+            // 로그인 상태 저장
+            this.saveLoginState(this.currentUser, this.userToken, this.userDailyCount);
+            
+            // UI 업데이트
+            this.updateUserDisplay();
+            this.hideLoginModal();
+            
+            // 갤러리 새로고침 (사용자별 필터링이 필요한 경우에만)
+            // 현재는 모든 작품을 보여주므로 새로고침 제거
+            // this.showGalleryLoading();
+            // await this.gallery.loadGallery();
+            // this.hideGalleryLoading();
+            
+        } catch (error) {
+            console.error('Google 토큰 검증 실패:', error);
+            this.showError('로그인에 실패했습니다. 다시 시도해주세요.');
+        }
+    }
+    
+    decodeJWT(token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length !== 3) return null;
+            
+            const payload = parts[1];
+            // 한글을 포함한 UTF-8 문자열을 올바르게 디코딩
+            const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            const decoded = new TextDecoder().decode(outputArray);
+            return JSON.parse(decoded);
+        } catch (error) {
+            console.error('JWT 디코딩 실패:', error);
+            return null;
+        }
+    }
+    
+
+    
+    logout() {
+        // 사용자 정보 초기화
+        this.currentUser = null;
+        this.userToken = null;
+        this.userDailyCount = 0;
+        
+        // localStorage에서 로그인 정보 삭제
+        this.clearLoginState();
+        
+        // Google Sign-In 상태 초기화 (Google 라이브러리가 로드된 경우)
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            google.accounts.id.disableAutoSelect();
+        }
+        
+        // UI 업데이트
+        this.updateUserDisplay();
+        
+        // Google 로그인 버튼 다시 렌더링
+        this.renderGoogleSignInButton();
+        
+        // 로그인 모달 표시
+        this.showLoginModal();
+        
+        // 갤러리 새로고침 제거 (페이지 첫 진입 시에만 로드)
+        // this.showGalleryLoading();
+        // this.gallery.loadGallery().finally(() => {
+        //     this.hideGalleryLoading();
+        // });
+    }
+    
+    showLoginModal() {
+        const loginModal = document.getElementById('login-modal');
+        const googleContainer = document.getElementById('google-signin-container');
+        
+        if (loginModal) {
+            // Google 로그인 버튼이 보이도록 설정
+            if (googleContainer) {
+                googleContainer.style.display = 'block';
+            }
+            
+            loginModal.classList.remove('hidden');
+        }
+    }
+    
+    showLoginModalWithoutGoogle() {
+        const loginModal = document.getElementById('login-modal');
+        const googleContainer = document.getElementById('google-signin-container');
+        
+        if (loginModal) {
+            // Google 로그인 버튼 숨기기 (Google 라이브러리 로드 실패 시에만)
+            if (googleContainer) {
+                googleContainer.style.display = 'none';
+            }
+            
+            // 모달 내용 수정
+            const modalBody = loginModal.querySelector('.modal-body p');
+            if (modalBody) {
+                modalBody.textContent = 'Google 로그인을 사용할 수 없습니다. 잠시 후 다시 시도해주세요.';
+            }
+            
+            loginModal.classList.remove('hidden');
+        }
+    }
+    
+    hideLoginModal() {
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.classList.add('hidden');
         }
     }
     
@@ -396,6 +669,34 @@ class ArtApp {
         
         loadingOverlay.classList.add('hidden');
         evaluateBtn.classList.remove('loading');
+    }
+
+    showGalleryLoading() {
+        const galleryLoadingOverlay = document.getElementById('gallery-loading-overlay');
+        if (galleryLoadingOverlay) {
+            galleryLoadingOverlay.classList.remove('hidden');
+        }
+    }
+
+    hideGalleryLoading() {
+        const galleryLoadingOverlay = document.getElementById('gallery-loading-overlay');
+        if (galleryLoadingOverlay) {
+            galleryLoadingOverlay.classList.add('hidden');
+        }
+    }
+
+    showLoginWaiting() {
+        const loginWaitingOverlay = document.getElementById('login-waiting-overlay');
+        if (loginWaitingOverlay) {
+            loginWaitingOverlay.classList.remove('hidden');
+        }
+    }
+
+    hideLoginWaiting() {
+        const loginWaitingOverlay = document.getElementById('login-waiting-overlay');
+        if (loginWaitingOverlay) {
+            loginWaitingOverlay.classList.add('hidden');
+        }
     }
     
     showError(message) {

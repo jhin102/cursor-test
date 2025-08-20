@@ -8,15 +8,31 @@ class ArtAPI {
         try {
             console.log('🎨 작품 평가 요청 중...');
             
+            const headers = {
+                'Content-Type': 'application/json',
+            };
+            
+            // 토큰이 있으면 Authorization 헤더 추가
+            if (window.artApp && window.artApp.userToken) {
+                headers['Authorization'] = `Bearer ${window.artApp.userToken}`;
+                console.log('Using token for authorization, token length:', window.artApp.userToken.length);
+            } else {
+                console.log('No token available for authorization');
+            }
+            
+            // 디버깅을 위한 로그
+            console.log('Sending image data length:', imageData ? imageData.length : 'undefined');
+            console.log('Image data starts with:', imageData ? imageData.substring(0, 50) + '...' : 'undefined');
+            
+            const requestBody = { 
+                image: imageData,
+                username: username 
+            };
+            
             const response = await fetch(`${this.baseURL}/artworks/evaluate`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    image: imageData,
-                    username: username 
-                })
+                headers: headers,
+                body: JSON.stringify(requestBody)
             });
             
             if (!response.ok) {
@@ -111,6 +127,39 @@ class ArtAPI {
             return result.stats;
         } catch (error) {
             console.error('통계 조회 실패:', error);
+            throw error;
+        }
+    }
+    
+    async verifyGoogleToken(idToken) {
+        try {
+            console.log('🔐 Google 토큰 검증 중...');
+            console.log('Token length:', idToken ? idToken.length : 0);
+            
+            const requestBody = { 
+                id_token: idToken 
+            };
+            console.log('Request body:', JSON.stringify(requestBody));
+            
+            const response = await fetch(`${this.baseURL}/auth/google`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '토큰 검증 실패');
+            }
+            
+            const result = await response.json();
+            console.log('✅ Google 토큰 검증 완료:', result);
+            
+            return result;
+        } catch (error) {
+            console.error('❌ Google 토큰 검증 실패:', error);
             throw error;
         }
     }

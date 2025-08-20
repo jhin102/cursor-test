@@ -288,12 +288,23 @@ class Stroke {
 class DrawingCanvas {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
+        
+        // 캔버스 요소가 존재하는지 확인
+        if (!this.canvas) {
+            throw new Error(`캔버스 요소를 찾을 수 없습니다: ${canvasId}`);
+        }
+        
         this.ctx = this.canvas.getContext('2d');
+        
+        // 2D 컨텍스트를 가져올 수 있는지 확인
+        if (!this.ctx) {
+            throw new Error('2D 컨텍스트를 초기화할 수 없습니다.');
+        }
+        
         this.isDrawing = false;
         this.brushSize = 5;
         this.brushColor = '#000000';
         this.brushType = 'pen';
-        this.hasContent = false;
         this.onDrawingStateChange = null;
         
         // 획 관리
@@ -393,7 +404,6 @@ class DrawingCanvas {
         // 오버레이 숨기기
         this.hideOverlay();
         
-        this.hasContent = true;
         this.notifyDrawingStateChange();
     }
     
@@ -461,11 +471,20 @@ class DrawingCanvas {
     clear() {
         this.strokes = [];
         this.currentStroke = null;
-        this.hasContent = false;
         this.notifyDrawingStateChange();
     }
     
     getImageData() {
+        // 캔버스가 제대로 초기화되었는지 확인
+        if (!this.canvas || !this.ctx) {
+            throw new Error('캔버스가 초기화되지 않았습니다.');
+        }
+        
+        // 캔버스에 그려진 내용이 있는지 확인
+        if (!this.hasDrawingContent()) {
+            throw new Error('이미지 데이터가 필요합니다.');
+        }
+        
         return this.canvas.toDataURL('image/png');
     }
     
@@ -478,12 +497,13 @@ class DrawingCanvas {
     
     notifyDrawingStateChange() {
         if (this.onDrawingStateChange) {
-            this.onDrawingStateChange(this.hasContent);
+            this.onDrawingStateChange(this.hasDrawingContent());
         }
     }
     
     hasDrawingContent() {
-        return this.strokes.length > 0 || this.currentStroke !== null;
+        // 완료된 획들이 있는지 확인 (현재 그리기 중인 획은 제외)
+        return this.strokes.length > 0;
     }
     
     validateContent() {
@@ -568,7 +588,6 @@ class DrawingCanvas {
         if (this.strokes.length === 0) return;
         
         this.strokes.pop();
-        this.hasContent = this.hasDrawingContent();
         this.notifyDrawingStateChange();
     }
 } 

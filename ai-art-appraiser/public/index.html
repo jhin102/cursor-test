@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles/main.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="styles/canvas.css">
     <link rel="stylesheet" href="styles/gallery.css">
 </head>
@@ -25,6 +26,10 @@
             <div class="user-info">
                 <div class="username-container">
                     <span id="username-display" class="username-display">게스트</span>
+                    <button id="logout-btn" class="logout-btn hidden" title="로그아웃">
+                        <span class="logout-icon">🚪</span>
+                        <span class="logout-text">로그아웃</span>
+                    </button>
                 </div>
                 <div class="daily-count">
                     <span id="daily-count-display">남은 기회: 10/10</span>
@@ -197,15 +202,33 @@
                 <p>아직 평가된 작품이 없습니다.</p>
                 <p>위에서 그림을 그려보세요!</p>
             </div>
+            
+            <!-- 갤러리 로딩 오버레이 -->
+            <div id="gallery-loading-overlay" class="gallery-loading-overlay hidden">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <p>갤러리를 불러오는 중...</p>
+                </div>
+            </div>
         </div>
         
     </div>
 
-    <!-- 로딩 오버레이 -->
+    <!-- 평가 로딩 오버레이 -->
     <div id="loading-overlay" class="loading-overlay hidden">
         <div class="loading-content">
             <div class="loading-spinner"></div>
             <p>AI가 작품을 감상 중...</p>
+        </div>
+    </div>
+
+
+
+    <!-- 로그인 대기 오버레이 -->
+    <div id="login-waiting-overlay" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>로그인 준비 중...</p>
         </div>
     </div>
 
@@ -225,17 +248,17 @@
         </div>
     </div>
 
-    <!-- 사용자명 입력 모달 -->
-    <div id="username-modal" class="modal hidden">
+    <!-- Google 로그인 모달 -->
+    <div id="login-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>사용자명을 입력해주세요</h3>
+                <h3>로그인</h3>
             </div>
             <div class="modal-body">
-                <input type="text" id="username-input" class="username-input" placeholder="게스트" maxlength="20" />
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="username-ok-btn" class="btn btn-primary">확인</button>
+                <p>AI 그림 감정사를 사용하려면 로그인해주세요.</p>
+                <div id="google-signin-container" class="google-signin-container">
+                    <!-- Google Sign-In 버튼이 여기에 렌더링됩니다 -->
+                </div>                
             </div>
         </div>
     </div>
