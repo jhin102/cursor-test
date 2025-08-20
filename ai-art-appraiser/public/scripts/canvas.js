@@ -1,4 +1,290 @@
-// 그리기 캔버스 클래스
+// 획(Stroke) 클래스 - 한 번의 그리기 동작을 나타냄
+class Stroke {
+    constructor(brushType, brushSize, brushColor) {
+        this.brushType = brushType;
+        this.brushSize = brushSize;
+        this.brushColor = brushColor;
+        this.inputPoints = []; // 사용자 입력 원본 점들
+        this.drawingPoints = []; // 그리기용 점 집합 (벡터 연산으로 계산)
+        this.isComplete = false;
+    }
+    
+    // 입력 점 추가
+    addInputPoint(x, y, time) {
+        this.inputPoints.push({ x, y, time });
+        this.calculateDrawingPoints();
+    }
+    
+    // 벡터 연산을 통한 그리기용 점 집합 계산
+    calculateDrawingPoints() {
+        if (this.inputPoints.length < 2) return;
+        
+        this.drawingPoints = [];
+        const m = this.brushSize / 2; // 브러시 반지름
+        
+        for (let i = 0; i < this.inputPoints.length; i++) {
+            const current = this.inputPoints[i];
+            
+            if (i === 0) {
+                // 첫 번째 점은 이전 점이 없으므로 다음 점과의 방향 사용
+                if (this.inputPoints.length > 1) {
+                    const next = this.inputPoints[i + 1];
+                    const dx = next.x - current.x;
+                    const dy = next.y - current.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 0) {
+                        const p1 = {
+                            x: current.x - m * dy / distance,
+                            y: current.y + m * dx / distance
+                        };
+                        const p2 = {
+                            x: current.x + m * dy / distance,
+                            y: current.y - m * dx / distance
+                        };
+                        this.drawingPoints.push(p1, p2);
+                    }
+                }
+            } else if (i === this.inputPoints.length - 1) {
+                // 마지막 점은 다음 점이 없으므로 이전 점과의 방향 사용
+                const prev = this.inputPoints[i - 1];
+                const dx = current.x - prev.x;
+                const dy = current.y - prev.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    const p1 = {
+                        x: current.x - m * dy / distance,
+                        y: current.y + m * dx / distance
+                    };
+                    const p2 = {
+                        x: current.x + m * dy / distance,
+                        y: current.y - m * dx / distance
+                    };
+                    this.drawingPoints.push(p1, p2);
+                }
+            } else {
+                // 중간 점들은 이전과 다음 점의 평균 방향 사용
+                const prev = this.inputPoints[i - 1];
+                const next = this.inputPoints[i + 1];
+                
+                const dx1 = current.x - prev.x;
+                const dy1 = current.y - prev.y;
+                const dx2 = next.x - current.x;
+                const dy2 = next.y - current.y;
+                
+                // 평균 방향 벡터 계산
+                const avgDx = (dx1 + dx2) / 2;
+                const avgDy = (dy1 + dy2) / 2;
+                const avgDistance = Math.sqrt(avgDx * avgDx + avgDy * avgDy);
+                
+                if (avgDistance > 0) {
+                    const p1 = {
+                        x: current.x - m * avgDy / avgDistance,
+                        y: current.y + m * avgDx / avgDistance
+                    };
+                    const p2 = {
+                        x: current.x + m * avgDy / avgDistance,
+                        y: current.y - m * avgDx / avgDistance
+                    };
+                    this.drawingPoints.push(p1, p2);
+                }
+            }
+        }
+    }
+    
+    // 획 완료 표시
+    complete() {
+        this.isComplete = true;
+    }
+    
+    // 획 그리기
+    draw(ctx) {
+        if (this.drawingPoints.length < 4) return;
+        
+        ctx.save();
+        
+        switch (this.brushType) {
+            case 'pen':
+                this.drawPen(ctx);
+                break;
+            case 'watercolor':
+                this.drawWatercolor(ctx);
+                break;
+            case 'highlighter':
+                this.drawHighlighter(ctx);
+                break;
+            case 'eraser':
+                this.drawEraser(ctx);
+                break;
+        }
+        
+        ctx.restore();
+    }
+    
+    // 펜 그리기
+    drawPen(ctx) {
+        ctx.strokeStyle = this.brushColor;
+        ctx.fillStyle = this.brushColor;
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // 2차 곡선으로 그리기
+        ctx.beginPath();
+        
+        // 왼쪽 경계선
+        for (let i = 0; i < this.drawingPoints.length; i += 2) {
+            const point = this.drawingPoints[i];
+            if (i === 0) {
+                ctx.moveTo(point.x, point.y);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+        }
+        
+        // 오른쪽 경계선 (역순)
+        for (let i = this.drawingPoints.length - 1; i >= 1; i -= 2) {
+            const point = this.drawingPoints[i];
+            ctx.lineTo(point.x, point.y);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        
+        // 첫 입력과 마지막 입력에 원 그리기
+        if (this.inputPoints.length > 0) {
+            // 첫 번째 점에 원 그리기
+            const firstPoint = this.inputPoints[0];
+            ctx.beginPath();
+            ctx.arc(firstPoint.x, firstPoint.y, this.brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 마지막 점에 원 그리기 (첫 번째와 다른 경우에만)
+            if (this.inputPoints.length > 1) {
+                const lastPoint = this.inputPoints[this.inputPoints.length - 1];
+                if (lastPoint.x !== firstPoint.x || lastPoint.y !== firstPoint.y) {
+                    ctx.beginPath();
+                    ctx.arc(lastPoint.x, lastPoint.y, this.brushSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+    }
+    
+    // 붓 그리기
+    drawWatercolor(ctx) {
+        ctx.strokeStyle = this.brushColor;
+        ctx.fillStyle = this.brushColor;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // 순서대로 점점 옅어지도록 그리기
+        for (let i = 0; i < this.inputPoints.length; i++) {
+            const point = this.inputPoints[i];
+            const progress = i / 15 > 15 ? 15 : i / 15; // 0~1 사이의 진행도
+            const alpha = 0.7 * (1 - progress * 0.7); // 시작 80%에서 끝 24%까지 점점 옅어짐
+            
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = this.brushSize * (1 - progress * 0.25); // 브러시 크기도 점점 작아짐
+            
+            if (i === 0) {
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+            ctx.stroke();
+        }        
+        // ctx.stroke();
+        ctx.globalAlpha = 1.0; // 알파값 복원
+    }
+    
+    // 지우개 그리기
+    drawEraser(ctx) {
+        ctx.strokeStyle = '#FFFFFF'; // 흰색 고정
+        ctx.fillStyle = '#FFFFFF'; // 흰색 고정
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // 2차 곡선으로 그리기
+        ctx.beginPath();
+        
+        // 왼쪽 경계선
+        for (let i = 0; i < this.drawingPoints.length; i += 2) {
+            const point = this.drawingPoints[i];
+            if (i === 0) {
+                ctx.moveTo(point.x, point.y);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+        }
+        
+        // 오른쪽 경계선 (역순)
+        for (let i = this.drawingPoints.length - 1; i >= 1; i -= 2) {
+            const point = this.drawingPoints[i];
+            ctx.lineTo(point.x, point.y);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        
+        // 첫 입력과 마지막 입력에 원 그리기
+        if (this.inputPoints.length > 0) {
+            // 첫 번째 점에 원 그리기
+            const firstPoint = this.inputPoints[0];
+            ctx.beginPath();
+            ctx.arc(firstPoint.x, firstPoint.y, this.brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 마지막 점에 원 그리기 (첫 번째와 다른 경우에만)
+            if (this.inputPoints.length > 1) {
+                const lastPoint = this.inputPoints[this.inputPoints.length - 1];
+                if (lastPoint.x !== firstPoint.x || lastPoint.y !== firstPoint.y) {
+                    ctx.beginPath();
+                    ctx.arc(lastPoint.x, lastPoint.y, this.brushSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+    }
+    
+    // 형광펜 그리기
+    drawHighlighter(ctx) {
+        ctx.strokeStyle = this.brushColor;
+        ctx.fillStyle = this.brushColor;
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // 2차 곡선으로 그리기
+        ctx.beginPath();
+        ctx.globalAlpha = 0.5; // 알파값 복원
+
+        // 왼쪽 경계선
+        for (let i = 0; i < this.drawingPoints.length; i += 2) {
+            const point = this.drawingPoints[i];
+            if (i === 0) {
+                ctx.moveTo(point.x, point.y);
+            } else {
+                ctx.lineTo(point.x, point.y);
+            }
+        }
+        
+        // 오른쪽 경계선 (역순)
+        for (let i = this.drawingPoints.length - 1; i >= 1; i -= 2) {
+            const point = this.drawingPoints[i];
+            ctx.lineTo(point.x, point.y);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.1; // 알파값 복원
+    }
+}
+
+// 고급 그리기 캔버스 클래스
 class DrawingCanvas {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -6,13 +292,13 @@ class DrawingCanvas {
         this.isDrawing = false;
         this.brushSize = 5;
         this.brushColor = '#000000';
-        this.brushType = 'pen'; // 기본 펜
+        this.brushType = 'pen';
         this.hasContent = false;
         this.onDrawingStateChange = null;
-        this.lastX = 0;
-        this.lastY = 0;
-        this.history = [];
-        this.maxHistory = 50;
+        
+        // 획 관리
+        this.strokes = []; // 완료된 획들
+        this.currentStroke = null; // 현재 그리는 획
         
         this.init();
     }
@@ -21,18 +307,12 @@ class DrawingCanvas {
         this.setupCanvas();
         this.setupEventListeners();
         this.setupToolbar();
+        this.startRenderLoop();
     }
     
     setupCanvas() {
-        // 캔버스 초기 설정
         this.ctx.fillStyle = 'white';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // 그리기 설정
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.strokeStyle = this.brushColor;
-        this.ctx.lineWidth = this.brushSize;
     }
     
     setupEventListeners() {
@@ -42,7 +322,7 @@ class DrawingCanvas {
         this.canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
         this.canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
         
-        // 터치 이벤트 (모바일 지원)
+        // 터치 이벤트
         this.canvas.addEventListener('touchstart', this.handleTouch.bind(this));
         this.canvas.addEventListener('touchmove', this.handleTouch.bind(this));
         this.canvas.addEventListener('touchend', this.stopDrawing.bind(this));
@@ -71,13 +351,9 @@ class DrawingCanvas {
         const brushButtons = document.querySelectorAll('.brush-btn');
         brushButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // 활성 브러시 버튼 변경
                 brushButtons.forEach(b => b.classList.remove('active'));
                 e.target.closest('.brush-btn').classList.add('active');
-                
-                // 브러시 타입 설정
                 this.brushType = e.target.closest('.brush-btn').dataset.brush;
-                this.updateBrushSettings();
             });
         });
         
@@ -87,7 +363,6 @@ class DrawingCanvas {
         
         brushSizeSlider.addEventListener('input', (e) => {
             this.brushSize = parseInt(e.target.value);
-            this.updateBrushSettings();
             brushSizeDisplay.textContent = `${this.brushSize}px`;
         });
         
@@ -95,180 +370,76 @@ class DrawingCanvas {
         this.setupColorPalette();
     }
     
-    updateBrushSettings() {
-        switch (this.brushType) {
-            case 'pen':
-                this.ctx.lineCap = 'round';
-                this.ctx.lineJoin = 'round';
-                this.ctx.lineWidth = this.brushSize;
-                this.ctx.strokeStyle = this.brushColor;
-                this.ctx.globalAlpha = 1.0;
-                break;
-                
-            case 'watercolor':
-                this.ctx.lineCap = 'round';
-                this.ctx.lineJoin = 'round';
-                this.ctx.lineWidth = this.brushSize * 1.5;
-                this.ctx.strokeStyle = this.brushColor;
-                this.ctx.globalAlpha = 0.35; // 더 연하게
-                break;
-                
-            case 'highlighter':
-                this.ctx.lineCap = 'square';
-                this.ctx.lineJoin = 'bevel';
-                this.ctx.lineWidth = this.brushSize * 2;
-                this.ctx.strokeStyle = this.brushColor;
-                this.ctx.globalAlpha = 0.4;
-                break;
-        }
+    getCanvasPoint(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
+            time: performance.now()
+        };
     }
     
     startDrawing(e) {
-        // 현재 상태 저장 (실행 취소용)
-        this.saveState();
         this.isDrawing = true;
-        const rect = this.canvas.getBoundingClientRect();
-        this.lastX = e.clientX - rect.left;
-        this.lastY = e.clientY - rect.top;
-        this.draw(e);
-    }
-    
-    draw(e) {
-        if (!this.isDrawing) return;
+        const point = this.getCanvasPoint(e);
         
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        // 새로운 획 생성
+        this.currentStroke = new Stroke(this.brushType, this.brushSize, this.brushColor);
+        this.currentStroke.addInputPoint(point.x, point.y, point.time);
         
-        switch (this.brushType) {
-            case 'pen':
-                this.drawPen(x, y);
-                break;
-            case 'watercolor':
-                this.drawWatercolor(x, y);
-                break;
-            case 'highlighter':
-                this.drawHighlighter(x, y);
-                break;
-        }
-        
-        this.lastX = x;
-        this.lastY = y;
         this.hasContent = true;
         this.notifyDrawingStateChange();
     }
     
-    drawPen(x, y) {
-        // 기본 펜: 부드럽고 정확한 선
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.lastX, this.lastY);
-        this.ctx.lineTo(x, y);
-        this.ctx.stroke();
-    }
-    
-    drawWatercolor(x, y) {
-        // 수채화 효과: 더 연하고 부드럽게
-        const steps = 5;
-        const pressure = Math.random() * 0.25 + 0.6; // 더 낮은 압력 범위
-        
-        for (let i = 0; i < steps; i++) {
-            const offsetX = (Math.random() - 0.5) * this.brushSize * 0.35;
-            const offsetY = (Math.random() - 0.5) * this.brushSize * 0.35;
-            const alpha = 0.35 * pressure * (1 - i / steps); // 알파 더 낮춤
-            
-            this.ctx.globalAlpha = alpha;
-            this.ctx.lineWidth = this.brushSize * 1.4 * pressure;
-            
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.lastX + offsetX, this.lastY + offsetY);
-            this.ctx.lineTo(x + offsetX, y + offsetY);
-            this.ctx.stroke();
-        }
-        
-        // 수채화 확산 효과 (원형 번짐)
-        this.drawWatercolorSpread(x, y);
-    }
-    
-    drawWatercolorSpread(x, y) {
-        // 수채화의 확산 효과 - 원형 번짐으로 복원하고 더 연하게
-        const distance = Math.sqrt((x - this.lastX) ** 2 + (y - this.lastY) ** 2);
-        if (distance > 4) {
-            const dropCount = Math.floor(distance / 3);
-            
-            for (let i = 0; i < dropCount; i++) {
-                const t = i / dropCount;
-                const cx = this.lastX + (x - this.lastX) * t + (Math.random() - 0.5) * this.brushSize * 0.4;
-                const cy = this.lastY + (y - this.lastY) * t + (Math.random() - 0.5) * this.brushSize * 0.4;
-                const radius = (Math.random() * 0.5 + 0.3) * this.brushSize; // 작은 방울들
-                const alpha = 0.12 * (1 - t) * (Math.random() * 0.8 + 0.2); // 훨씬 연하게
-                
-                this.ctx.save();
-                this.ctx.globalAlpha = alpha;
-                this.ctx.fillStyle = this.brushColor;
-                this.ctx.beginPath();
-                this.ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.restore();
-            }
-        }
-    }
-    
-    drawHighlighter(x, y) {
-        // 형광펜 효과: 넓고 평평한 선
-        const distance = Math.sqrt((x - this.lastX) ** 2 + (y - this.lastY) ** 2);
-        
-        if (distance > 2) {
-            // // 메인 하이라이트 선
-            // this.ctx.globalAlpha = 0.4;
-            // this.ctx.lineWidth = this.brushSize * 2;
-            // this.ctx.beginPath();
-            // this.ctx.moveTo(this.lastX, this.lastY);
-            // this.ctx.lineTo(x, y);
-            // this.ctx.stroke();
-            
-            // 추가 하이라이트 효과 (더 넓은 배경)
-            this.ctx.globalAlpha = 0.2;
-            this.ctx.lineWidth = this.brushSize * 4;
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.lastX, this.lastY);
-            this.ctx.lineTo(x, y);
-            this.ctx.stroke();
-            
-            // // 형광펜의 끝 부분 강조
-            // this.ctx.globalAlpha = 0.6;
-            // this.ctx.lineWidth = this.brushSize * 1.5;
-            // this.ctx.beginPath();
-            // this.ctx.moveTo(this.lastX, this.lastY);
-            // this.ctx.lineTo(x, y);
-            // this.ctx.stroke();
-        }
-        
-        // 형광펜의 점 효과 제거 (원형 패턴 제거)
-    }
-    
-    drawHighlighterDots(x, y) {
-        // 형광펜의 점진적 효과 - 원형 대신 선형으로 변경
-        const dotCount = 2;
-        for (let i = 0; i < dotCount; i++) {
-            const dotX = this.lastX + (x - this.lastX) * (i / dotCount);
-            const dotY = this.lastY + (y - this.lastY) * (i / dotCount);
-            const offsetX = (Math.random() - 0.5) * this.brushSize * 0.5;
-            const offsetY = (Math.random() - 0.5) * this.brushSize * 0.5;
-            const alpha = 0.3 * (1 - i / dotCount);
-            const width = this.brushSize * 0.8 * (1 - i / dotCount);
-            
-            this.ctx.globalAlpha = alpha;
-            this.ctx.lineWidth = width;
-            this.ctx.beginPath();
-            this.ctx.moveTo(dotX + offsetX, dotY + offsetY);
-            this.ctx.lineTo(dotX + offsetX * 1.5, dotY + offsetY * 1.5);
-            this.ctx.stroke();
-        }
+    draw(e) {
+        if (!this.isDrawing || !this.currentStroke) return;
+
+        const point = this.getCanvasPoint(e);
+        this.currentStroke.addInputPoint(point.x, point.y, point.time);
     }
     
     stopDrawing() {
+        if (!this.isDrawing || !this.currentStroke) return;
+        
         this.isDrawing = false;
-        this.ctx.globalAlpha = 1.0;
+        
+        // 현재 획 완료
+        this.currentStroke.complete();
+        
+        // 완료된 획을 리스트에 추가
+        this.strokes.push(this.currentStroke);
+        this.currentStroke = null;
+        
+        this.notifyDrawingStateChange();
+    }
+    
+    // 캔버스 다시 그리기 (매 프레임마다 호출)
+    redraw() {
+        // 캔버스 초기화
+        this.ctx.fillStyle = 'white';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // 완료된 획들 그리기
+        this.strokes.forEach(stroke => {
+            stroke.draw(this.ctx);
+        });
+        
+        // 현재 그리는 획 그리기
+        if (this.currentStroke) {
+            this.currentStroke.draw(this.ctx);
+        }
+    }
+    
+    startRenderLoop() {
+        const renderFrame = () => {
+            this.redraw();
+            requestAnimationFrame(renderFrame);
+        };
+        
+        renderFrame();
     }
     
     handleTouch(e) {
@@ -285,9 +456,8 @@ class DrawingCanvas {
     }
     
     clear() {
-        this.ctx.fillStyle = 'white';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+        this.strokes = [];
+        this.currentStroke = null;
         this.hasContent = false;
         this.notifyDrawingStateChange();
     }
@@ -309,21 +479,10 @@ class DrawingCanvas {
         }
     }
     
-    // 캔버스에 내용이 있는지 확인
     hasDrawingContent() {
-        const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        const data = imageData.data;
-        
-        // 모든 픽셀이 흰색인지 확인
-        for (let i = 0; i < data.length; i += 4) {
-            if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) {
-                return true;
-            }
-        }
-        return false;
+        return this.strokes.length > 0 || this.currentStroke !== null;
     }
     
-    // 캔버스 내용 검증
     validateContent() {
         if (!this.hasDrawingContent()) {
             throw new Error('캔버스에 그려진 내용이 없습니다.');
@@ -335,17 +494,14 @@ class DrawingCanvas {
         const colorInput = document.getElementById('color-input');
         const colorPickerPopup = document.getElementById('color-picker-popup');
         
-        // 색상 스와치 클릭 이벤트
         colorSwatches.forEach(swatch => {
             swatch.addEventListener('click', (e) => {
                 const clickedColor = e.target.dataset.color;
                 const isCurrentlyActive = e.target.classList.contains('active');
                 
                 if (isCurrentlyActive) {
-                    // 현재 선택된 색상을 다시 클릭하면 색상 선택기를 해당 스와치 아래에 표시
                     this.showColorPickerAtSwatch(e.target);
                 } else {
-                    // 새로운 색상 선택
                     colorSwatches.forEach(s => s.classList.remove('active'));
                     e.target.classList.add('active');
                     this.setColor(clickedColor);
@@ -354,12 +510,10 @@ class DrawingCanvas {
             });
         });
         
-        // 색상 입력 이벤트 - 색상이 변경되면 현재 활성 스와치 업데이트
         colorInput.addEventListener('input', (e) => {
             const newColor = e.target.value;
             this.setColor(newColor);
             
-            // 현재 활성 스와치를 새로운 색상으로 업데이트
             const activeSwatch = document.querySelector('.color-swatch.active');
             if (activeSwatch) {
                 activeSwatch.style.backgroundColor = newColor;
@@ -367,12 +521,10 @@ class DrawingCanvas {
             }
         });
         
-        // 색상 선택 완료 시 팝업 숨기기
         colorInput.addEventListener('change', (e) => {
             colorPickerPopup.classList.remove('show');
         });
         
-        // 색상 선택기 외부 클릭 시 팝업 숨기기
         document.addEventListener('click', (e) => {
             const colorPalette = document.querySelector('.color-palette');
             if (!colorPalette.contains(e.target) && !colorPickerPopup.contains(e.target)) {
@@ -380,63 +532,39 @@ class DrawingCanvas {
             }
         });
         
-        // 초기 색상 설정
         this.setColor('#000000');
     }
     
     setColor(color) {
         this.brushColor = color;
         document.getElementById('color-input').value = color;
-        this.updateBrushSettings();
     }
     
     showColorPickerAtSwatch(swatch) {
         const colorPickerPopup = document.getElementById('color-picker-popup');
         const colorInput = document.getElementById('color-input');
         
-        // 스와치의 위치 계산
         const swatchRect = swatch.getBoundingClientRect();
         const popup = colorPickerPopup;
         
-        // 팝업을 스와치 아래에 위치시키기
         popup.style.position = 'fixed';
         popup.style.top = (swatchRect.bottom + 5) + 'px';
         popup.style.left = swatchRect.left + 'px';
         popup.style.margin = '0';
         popup.style.zIndex = '1000';
         
-        // 팝업 표시
         popup.classList.add('show');
         
-        // 색상 선택기 클릭
         setTimeout(() => {
             colorInput.click();
         }, 10);
     }
 
-    // 실행 취소 스냅샷 저장
-    saveState() {
-        try {
-            const snapshot = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-            this.history.push(snapshot);
-            if (this.history.length > this.maxHistory) {
-                this.history.shift();
-            }
-        } catch (err) {
-            console.error('캔버스 상태 저장 실패:', err);
-        }
-    }
-
-    // 마지막 획 실행 취소
+    // 마지막 획 삭제 (Ctrl+Z)
     undoLastStroke() {
-        if (this.history.length === 0) return;
-        const snapshot = this.history.pop();
-        try {
-            this.ctx.putImageData(snapshot, 0, 0);
-        } catch (err) {
-            console.error('캔버스 실행 취소 실패:', err);
-            return;
-        }
+        if (this.strokes.length === 0) return;
+        
+        this.strokes.pop();
         this.hasContent = this.hasDrawingContent();
         this.notifyDrawingStateChange();
     }
