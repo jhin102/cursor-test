@@ -282,8 +282,18 @@ class ArtApp {
             
             // 사용자 정보 업데이트
             this.userDailyCount = result.user.daily_count;
+            // 서버에서 새로운 토큰이 반환된 경우 업데이트
+            if (result.user.token) {
+                this.userToken = result.user.token;
+            }
             this.saveLoginState(this.currentUser, this.userToken, this.userDailyCount);
             this.updateUserDisplay();
+            
+            // 평가 버튼 상태 업데이트
+            this.updateEvaluateButton(this.canvas.hasContent());
+            
+            // 캔버스 지우기 (평가 완료 후)
+            this.canvas.clear();
             
             // 갤러리 새로고침 (비동기로 처리하여 모달 표시에 영향 주지 않도록)
             setTimeout(async () => {
@@ -593,33 +603,11 @@ class ArtApp {
 
     
     logout() {
-        // 사용자 정보 초기화
-        this.currentUser = null;
-        this.userToken = null;
-        this.userDailyCount = 0;
-        
         // localStorage에서 로그인 정보 삭제
         this.clearLoginState();
         
-        // Google Sign-In 상태 초기화 (Google 라이브러리가 로드된 경우)
-        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-            google.accounts.id.disableAutoSelect();
-        }
-        
-        // UI 업데이트
-        this.updateUserDisplay();
-        
-        // Google 로그인 버튼 다시 렌더링
-        this.renderGoogleSignInButton();
-        
-        // 로그인 모달 표시
-        this.showLoginModal();
-        
-        // 갤러리 새로고침 제거 (페이지 첫 진입 시에만 로드)
-        // this.showGalleryLoading();
-        // this.gallery.loadGallery().finally(() => {
-        //     this.hideGalleryLoading();
-        // });
+        // 페이지 새로고침으로 모든 상태 초기화
+        location.reload();
     }
     
     showLoginModal() {

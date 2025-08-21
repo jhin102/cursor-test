@@ -96,6 +96,21 @@ module.exports = async (req, res) => {
 
     const updatedUser = await database.get('SELECT * FROM users WHERE id = $1', [user.id]);
 
+    // 새로운 JWT 토큰 생성 (로그인된 사용자의 경우)
+    let newToken = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+      newToken = jwt.sign(
+        { 
+          userId: updatedUser.id, 
+          googleId: updatedUser.google_id,
+          username: updatedUser.username 
+        },
+        jwtSecret,
+        { expiresIn: '7d', algorithm: 'HS256' }
+      );
+    }
+
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       success: true,
@@ -112,7 +127,8 @@ module.exports = async (req, res) => {
       user: {
         username: updatedUser.username,
         daily_count: updatedUser.daily_count,
-        total_score: updatedUser.total_score
+        total_score: updatedUser.total_score,
+        token: newToken // 새로운 토큰 포함
       },
       evaluation: {
         title: evaluation.title || '무제',
